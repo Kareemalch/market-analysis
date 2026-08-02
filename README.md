@@ -7,7 +7,7 @@ A Google Finance–style stock tracker built with Flask. Look up any ticker for 
 - 💹 **Live quotes & charts** — real-time pricing via Yahoo Finance, no API key needed
 - 📰 **News** — latest headlines per ticker
 - ⭐ **Watchlist** — save your favorite stocks, backed by Supabase Auth
-- 🤖 **AI Business Insights** — Gemini reads the income statement and explains it in plain English
+- 🤖 **AI Business Insights** — Groq (Llama 3.3) reads the income statement and explains it in plain English
 - 💳 **Pro subscriptions** — Stripe Checkout for upgraded plans
 
 ## 🛠️ Stack
@@ -15,7 +15,7 @@ A Google Finance–style stock tracker built with Flask. Look up any ticker for 
 - Flask + `yfinance`
 - Supabase (Auth + Postgres)
 - Stripe
-- Google Gemini
+- Groq
 - Vanilla JS + Chart.js
 
 ## 🚀 Getting started
@@ -30,5 +30,5 @@ Then run `schema.sql` once in the Supabase SQL editor to set up the database tab
 
 ## 🔑 Environment variables
 
-You'll need Supabase, Stripe, and Gemini keys — see `.env.example` for the full list.
+You'll need Supabase, Stripe, and Groq keys — see `.env.example` for the full list.
 # market-analysis

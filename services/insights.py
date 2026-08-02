@@ -1,12 +1,12 @@
+import json
 from datetime import datetime, timedelta, timezone
 from typing import Literal
 
-from google.genai import types
-from google.genai.errors import APIError
+import groq
 from pydantic import BaseModel, Field
 
-from config import GEMINI_MODEL
-from extensions import genai_client, supabase
+from config import GROQ_MODEL
+from extensions import groq_client, supabase
 from services.stocks import get_income_statement
 
 INSIGHTS_CACHE_TTL = timedelta(hours=24)
@@ -110,27 +110,42 @@ def _build_user_prompt(ticker: str, periods: list[dict]) -> str:
     return "\n".join(lines)
 
 
+INSIGHTS_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "generate_business_insights",
+        "description": "Return a structured, plain-language summary of a public company's business and recent financial performance, based strictly on the income statement data provided in the prompt.",
+        "parameters": BusinessInsights.model_json_schema(),
+    },
+}
+
+
 def _call_llm(ticker: str, periods: list[dict]) -> dict:
-    if not genai_client:
+    if not groq_client:
         raise InsightsNotConfiguredError()
 
     try:
-        response = genai_client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=_build_user_prompt(ticker, periods),
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                response_mime_type="application/json",
-                response_schema=BusinessInsights,
-            ),
+        response = groq_client.chat.completions.create(
+            model=GROQ_MODEL,
+            max_tokens=1024,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": _build_user_prompt(ticker, periods)},
+            ],
+            tools=[INSIGHTS_TOOL],
+            tool_choice={"type": "function", "function": {"name": "generate_business_insights"}},
         )
-    except APIError as e:
+    except groq.APIError as e:
         print(f"insights LLM call failed for {ticker}: {e}")
         raise LLMGenerationError() from e
 
-    if not response.parsed:
+    tool_calls = response.choices[0].message.tool_calls
+    if not tool_calls:
         raise LLMGenerationError()
-    return response.parsed.model_dump()
+    try:
+        return json.loads(tool_calls[0].function.arguments)
+    except json.JSONDecodeError as e:
+        raise LLMGenerationError() from e
 
 
 def _fetch_cached(ticker: str) -> dict | None:
@@ -164,7 +179,7 @@ def _build_record(ticker: str, periods: list[dict], summary: dict) -> dict:
         "notable_flags": summary["notable_flags"],
         "data_basis": summary["data_basis"],
         "latest_fiscal_period_end": periods[0]["period_end"],
-        "model": GEMINI_MODEL,
+        "model": GROQ_MODEL,
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
 

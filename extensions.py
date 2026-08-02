@@ -1,5 +1,5 @@
 import stripe
-from google import genai
+from groq import Groq
 from supabase import create_client
 
 import config
@@ -12,8 +12,8 @@ supabase = (
 
 stripe.api_key = config.STRIPE_SECRET_KEY
 
-genai_client = (
-    genai.Client(api_key=config.GEMINI_API_KEY)
-    if config.GEMINI_API_KEY
+groq_client = (
+    Groq(api_key=config.GROQ_API_KEY)
+    if config.GROQ_API_KEY
     else None
 )

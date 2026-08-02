@@ -4,4 +4,4 @@ yfinance
 pandas
 supabase
 stripe
-google-genai
+groq
