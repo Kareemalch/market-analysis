@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pricing — Market Cap</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════ SIDEBAR ═══════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">MC</div>
+      <div>
+        <div class="brand-name">Market Cap</div>
+        <div class="brand-sub">Finance Panel</div>
+      </div>
+    </div>
+    <div class="sidebar-search">
+      <div class="sidebar-search-box" style="position:relative;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="search-input" type="text" placeholder="Search…" autocomplete="off" />
+        <div class="autocomplete-dropdown hidden" id="autocomplete" style="width:calc(var(--sidebar-w) - 32px);"></div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">General</div>
+      <a href="/" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Home Page
+      </a>
+      <a href="/" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+        <span class="nav-badge"><span class="nav-badge-dot"></span> 3</span>
+      </a>
+      <a href="/portfolio" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        Portfolio
+      </a>
+      <a href="/pricing" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        Pricing
+      </a>
+      <div class="nav-section-label" style="margin-top:8px;">Account</div>
+      <a href="/login" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Messages
+      </a>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        Settings
+      </div>
+      {% if user %}
+      <button class="nav-item" onclick="logout()" style="width:100%;text-align:left;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sign Out
+      </button>
+      {% else %}
+      <a href="/login" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Sign In
+      </a>
+      {% endif %}
+    </nav>
+    <div class="sidebar-footer">
+      <div class="usage-label">Auto Trades Usage</div>
+      <div class="usage-bar-wrap"><div class="usage-bar"></div></div>
+      <div class="usage-text">480 / 500</div>
+      <div class="usage-sub">20 Auto Trades Left · Be Pro!</div>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════ MAIN ═══════════════════════════ -->
+  <div class="main-wrap">
+
+    <div class="topbar">
+      <div class="topbar-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+      </div>
+      <div class="topbar-info">
+        <div class="topbar-title">Pricing <span class="topbar-dot"></span></div>
+        <div class="topbar-sub">Unlock the full power of Market Cap</div>
+      </div>
+      {% if user %}<span style="font-size:12px;color:var(--text-muted);margin-left:auto;margin-right:16px;">{{ user }}</span>{% endif %}
+    </div>
+
+    <div class="content">
+
+      {% if request.args.get('success') %}
+      <div class="pricing-success-banner">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Payment successful! Welcome to Market Cap Pro. Your account has been upgraded.
+      </div>
+      {% endif %}
+
+      <!-- Header -->
+      <div style="text-align:center;padding:40px 0 48px;">
+        <div style="display:inline-flex;align-items:center;gap:8px;background:var(--green-dim);border:1px solid rgba(0,217,126,0.2);border-radius:20px;padding:6px 16px;font-size:12px;font-weight:700;color:var(--green);margin-bottom:20px;">
+          <span class="topbar-dot" style="width:6px;height:6px;"></span> Simple Pricing
+        </div>
+        <h1 style="font-size:42px;font-weight:900;letter-spacing:-1px;margin-bottom:12px;">Choose Your Plan</h1>
+        <p style="color:var(--text-muted);font-size:16px;">Start free, upgrade when you're ready.</p>
+      </div>
+
+      <!-- Plan cards -->
+      <div class="pricing-grid">
+
+        <!-- Free -->
+        <div class="pricing-card">
+          <div class="pricing-card-top">
+            <div class="plan-name">Free</div>
+            <div class="plan-price">$0<span>/mo</span></div>
+            <div class="plan-sub">Everything you need to get started</div>
+          </div>
+          <ul class="plan-features">
+            <li class="feat yes">Live stock prices &amp; charts</li>
+            <li class="feat yes">1D / 1W / 1M chart periods</li>
+            <li class="feat yes">News feed per ticker</li>
+            <li class="feat yes">Up to 5 watchlist stocks</li>
+            <li class="feat yes">Market overview dashboard</li>
+            <li class="feat no">3M &amp; 1Y chart periods</li>
+            <li class="feat no">Unlimited watchlist</li>
+            <li class="feat no">Priority data refresh</li>
+            <li class="feat no">Portfolio analytics</li>
+          </ul>
+          {% if not user %}
+          <a href="/login" class="plan-btn outline">Get Started Free</a>
+          {% elif not pro %}
+          <button class="plan-btn outline" disabled>Current Plan</button>
+          {% else %}
+          <button class="plan-btn outline" onclick="cancelSub()">Downgrade to Free</button>
+          {% endif %}
+        </div>
+
+        <!-- Pro -->
+        <div class="pricing-card pro">
+          <div class="plan-popular">Most Popular</div>
+          <div class="pricing-card-top">
+            <div class="plan-name">Pro <span class="pro-badge-inline">PRO</span></div>
+            <div class="plan-price">$9<span>.99/mo</span></div>
+            <div class="plan-sub">For serious investors &amp; traders</div>
+          </div>
+          <ul class="plan-features">
+            <li class="feat yes">Everything in Free</li>
+            <li class="feat yes">3M &amp; 1Y chart periods</li>
+            <li class="feat yes"><strong>Unlimited</strong> watchlist stocks</li>
+            <li class="feat yes">Priority data refresh</li>
+            <li class="feat yes">Portfolio analytics</li>
+            <li class="feat yes">Advanced key statistics</li>
+            <li class="feat yes">Early access to new features</li>
+            <li class="feat yes">Email support</li>
+          </ul>
+
+          {% if not user %}
+          <a href="/login" class="plan-btn filled">Sign In to Upgrade</a>
+          {% elif pro %}
+          <div style="text-align:center;">
+            <div class="plan-btn outline" style="cursor:default;opacity:0.6;">Current Plan ✓</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:10px;" id="period-end-label"></div>
+          </div>
+          {% elif stripe_configured %}
+          <button class="plan-btn filled" onclick="checkout()" id="checkout-btn">
+            Upgrade to Pro →
+          </button>
+          {% else %}
+          <button class="plan-btn filled" disabled style="opacity:0.5;">Stripe Not Configured</button>
+          {% endif %}
+        </div>
+
+      </div><!-- /pricing-grid -->
+
+      <!-- FAQ -->
+      <div class="faq-section">
+        <h2 style="font-size:22px;font-weight:800;margin-bottom:24px;text-align:center;">Frequently Asked Questions</h2>
+        <div class="faq-grid">
+          <div class="faq-item">
+            <div class="faq-q">Can I cancel anytime?</div>
+            <div class="faq-a">Yes. Cancel from this page and you keep Pro until the end of your billing period. No hidden fees.</div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q">What payment methods do you accept?</div>
+            <div class="faq-a">All major credit and debit cards via Stripe — Visa, Mastercard, Amex, and more.</div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q">Is the free plan really free?</div>
+            <div class="faq-a">Yes, forever. No credit card required. You get live prices, charts, and up to 5 watchlist stocks.</div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q">Where does the market data come from?</div>
+            <div class="faq-a">We use Yahoo Finance via yfinance — the same data powering many popular finance apps.</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main-wrap -->
+
+  <script src="/static/js/app.js"></script>
+  <script>
+    async function checkout() {
+      const btn = document.getElementById('checkout-btn');
+      btn.textContent = 'Redirecting…';
+      btn.disabled = true;
+      const res = await fetch('/api/payments/create-checkout', { method: 'POST' });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        window.toast(data.error || 'Checkout failed', 'error');
+        btn.textContent = 'Upgrade to Pro →';
+        btn.disabled = false;
+      }
+    }
+
+    async function cancelSub() {
+      if (!confirm('Cancel your Pro subscription? You keep Pro until end of billing period.')) return;
+      const res  = await fetch('/api/payments/cancel', { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) {
+        window.toast(data.message || 'Subscription will cancel at period end.', 'success');
+        setTimeout(() => location.reload(), 2000);
+      } else {
+        window.toast(data.error || 'Cancel failed', 'error');
+      }
+    }
+
+    // Show period end for pro users
+    async function loadStatus() {
+      const el = document.getElementById('period-end-label');
+      if (!el) return;
+      const res  = await fetch('/api/payments/status');
+      const data = await res.json();
+      if (data.current_period_end) {
+        const d = new Date(data.current_period_end).toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'});
+        el.textContent = `Renews ${d}`;
+        if (data.status === 'canceling') el.textContent = `Cancels ${d}`;
+      }
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/';
+    }
+
+    loadStatus();
+  </script>
+</body>
+</html>

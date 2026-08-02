@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In — Market Cap</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body class="auth-page">
+
+  <div class="auth-container">
+
+    <div class="auth-logo">
+      <div class="auth-logo-icon">MC</div>
+      Market Cap
+    </div>
+
+    <div style="text-align:center;margin-top:-8px;">
+      <div style="font-size:13px;color:var(--text-muted);">Finance Panel · Track and learn about your assets</div>
+    </div>
+
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+        <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+      </div>
+
+      <div class="auth-error hidden" id="auth-error"></div>
+
+      <!-- Login -->
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="login-email" placeholder="you@example.com" required />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="login-password" placeholder="••••••••" required />
+        </div>
+        <button type="submit" class="btn-submit" id="login-btn">Sign In to Dashboard</button>
+      </form>
+
+      <!-- Signup -->
+      <form id="signup-form" class="hidden" onsubmit="handleSignup(event)">
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="signup-email" placeholder="you@example.com" required />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="signup-password" placeholder="Min 6 characters" required minlength="6" />
+        </div>
+        <button type="submit" class="btn-submit" id="signup-btn">Create Account</button>
+      </form>
+    </div>
+
+    <p class="auth-back"><a href="/">← Back to Dashboard</a></p>
+
+  </div>
+
+  <script>
+    function switchTab(tab) {
+      document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
+      document.getElementById('signup-form').classList.toggle('hidden', tab !== 'signup');
+      document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+      document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+      document.getElementById('auth-error').classList.add('hidden');
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('auth-error');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const btn = document.getElementById('login-btn');
+      btn.textContent = 'Signing in…'; btn.disabled = true;
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: document.getElementById('login-email').value,
+          password: document.getElementById('login-password').value,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) { window.location.href = '/'; }
+      else { showError(data.error || 'Login failed'); btn.textContent = 'Sign In to Dashboard'; btn.disabled = false; }
+    }
+
+    async function handleSignup(e) {
+      e.preventDefault();
+      const btn = document.getElementById('signup-btn');
+      btn.textContent = 'Creating account…'; btn.disabled = true;
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: document.getElementById('signup-email').value,
+          password: document.getElementById('signup-password').value,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) { window.location.href = '/'; }
+      else { showError(data.error || 'Signup failed'); btn.textContent = 'Create Account'; btn.disabled = false; }
+    }
+  </script>
+</body>
+</html>

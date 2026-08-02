@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ quote.ticker }} — Market Cap</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- ═══════════════════════════ SIDEBAR ═══════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">MC</div>
+      <div>
+        <div class="brand-name">Market Cap</div>
+        <div class="brand-sub">Finance Panel</div>
+      </div>
+    </div>
+
+    <div class="sidebar-search">
+      <div class="sidebar-search-box" style="position:relative;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input id="search-input" type="text" placeholder="Search…" autocomplete="off" />
+        <div class="autocomplete-dropdown hidden" id="autocomplete" style="width:calc(var(--sidebar-w) - 32px);"></div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">General</div>
+      <a href="/" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Home Page
+      </a>
+      <a href="/" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+        <span class="nav-badge"><span class="nav-badge-dot"></span> 3</span>
+      </a>
+      <a href="/portfolio" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        Portfolio
+      </a>
+      <a href="/pricing" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        Pricing
+        {% if pro %}<span class="pro-badge">PRO</span>{% endif %}
+      </a>
+
+      <div class="nav-section-label" style="margin-top:8px;">Account</div>
+      <a href="/login" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Messages
+      </a>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        Settings
+      </div>
+      {% if user %}
+      <button class="nav-item" onclick="logout()" style="width:100%;text-align:left;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sign Out
+      </button>
+      {% else %}
+      <a href="/login" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Sign In
+      </a>
+      {% endif %}
+    </nav>
+
+    {% if user and not pro %}
+    <div class="sidebar-upgrade">
+      <div class="sidebar-upgrade-title">⚡ Upgrade to Pro</div>
+      <div class="sidebar-upgrade-sub">Unlimited watchlist · All chart periods</div>
+      <a href="/pricing" class="sidebar-upgrade-btn">View Plans →</a>
+    </div>
+    {% endif %}
+
+    <div class="sidebar-footer">
+      <div class="usage-label">Watchlist Usage</div>
+      <div class="usage-bar-wrap">
+        <div class="usage-bar" {% if not pro %}style="width:0%;" id="usage-bar"{% endif %}></div>
+      </div>
+      <div class="usage-text" id="usage-text">— / —</div>
+      <div class="usage-sub">{% if pro %}Pro · Unlimited stocks{% else %}Free · 5 stock limit{% endif %}</div>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════ MAIN ═══════════════════════════ -->
+  <div class="main-wrap">
+
+    <div class="topbar">
+      <div class="topbar-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+      </div>
+      <div class="topbar-info">
+        <div class="topbar-title">
+          {{ quote.ticker }}
+          <span class="topbar-dot"></span>
+          <span class="topbar-count">Live</span>
+        </div>
+        <div class="topbar-sub">{{ quote.name }}{% if quote.sector %} · {{ quote.sector }}{% endif %}</div>
+      </div>
+      <div class="topbar-actions">
+        {% if user %}
+          <button
+            id="watchlist-btn"
+            class="btn-watch {{ 'saved' if in_watchlist else '' }}"
+            onclick="toggleWatchlist('{{ quote.ticker }}', this)"
+          >{{ '★ Saved' if in_watchlist else '☆ Watch' }}</button>
+        {% else %}
+          <a href="/login" class="btn-watch">Sign in to save</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- Back -->
+      <div class="stock-header-row">
+        <a href="/" class="stock-back-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Back to Dashboard
+        </a>
+        {% if quote.sector %}<span style="font-size:12px;color:var(--text-muted);background:var(--bg-card-2);border:1px solid var(--border-light);border-radius:6px;padding:4px 10px;">{{ quote.sector }}</span>{% endif %}
+      </div>
+
+      <!-- Price + Actions -->
+      <div class="stock-hero-card">
+        <div class="price-card">
+          <div class="price-card-top">
+            <div class="stock-logo-box">
+              {% if quote.logo %}
+                <img src="{{ quote.logo }}" alt="{{ quote.ticker }}" onerror="this.parentElement.innerHTML='<span class=\'stock-logo-letter\'>{{ quote.ticker[0] }}</span>'" />
+              {% else %}
+                <span class="stock-logo-letter">{{ quote.ticker[0] }}</span>
+              {% endif %}
+            </div>
+            <div>
+              <div class="price-card-ticker">{{ quote.ticker }}</div>
+              <div class="price-card-name">{{ quote.name }}</div>
+            </div>
+          </div>
+          <div class="price-big">${{ "{:,.2f}".format(quote.price) }}</div>
+          <div class="price-change-row">
+            <span class="price-change {{ 'pos' if quote.change >= 0 else 'neg' }}">
+              {{ "+" if quote.change >= 0 else "" }}{{ "%.2f"|format(quote.change) }}
+              ({{ "+" if quote.change_pct >= 0 else "" }}{{ "%.2f"|format(quote.change_pct) }}%)
+            </span>
+            <span style="font-size:11px;color:var(--text-muted);">Today</span>
+          </div>
+        </div>
+
+        <div class="stock-actions-card">
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Quick Actions</div>
+          <button class="stock-action-btn buy">Buy {{ quote.ticker }}</button>
+          <button class="stock-action-btn sell">Sell {{ quote.ticker }}</button>
+          {% if user %}
+          <button
+            id="watchlist-btn-2"
+            class="stock-action-btn sell {{ 'saved' if in_watchlist else '' }}"
+            style="{{ 'border-color:var(--green);color:var(--green);' if in_watchlist else '' }}"
+            onclick="toggleWatchlist('{{ quote.ticker }}', this)"
+          >{{ '★ Remove from Watchlist' if in_watchlist else '☆ Add to Watchlist' }}</button>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Chart + News -->
+      <div class="stock-detail-grid">
+
+        <!-- Chart -->
+        <div>
+          <div class="chart-card" style="margin-bottom:14px;">
+            <div class="chart-card-header">
+              <div>
+                <div class="chart-card-title">Price History</div>
+                <div class="chart-card-sub">Historical data · {{ quote.ticker }}</div>
+              </div>
+              <div class="period-tabs" style="margin-bottom:0;">
+                {% for p in ['1D','1W','1M','3M','1Y'] %}
+                <button class="period-tab {{ 'active' if p == '1M' else '' }}"
+                  onclick="loadChart('{{ quote.ticker }}','{{ p }}',this)">{{ p }}</button>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="chart-wrapper" style="margin-top:14px;">
+              <canvas id="price-chart"></canvas>
+            </div>
+            <div class="chart-footer">
+              <div class="chart-footer-left">
+                <div class="cf-label">Change</div>
+                <div class="cf-value {{ 'positive' if quote.change_pct >= 0 else 'negative' }}" id="chart-avg">
+                  {{ "+" if quote.change_pct >= 0 else "" }}{{ "%.2f"|format(quote.change_pct) }}%
+                </div>
+              </div>
+              <div class="chart-footer-right">
+                <div class="cf-label">Current Price</div>
+                <div class="cf-value">${{ "{:,.2f}".format(quote.price) }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div class="chart-card">
+            <div class="chart-card-title" style="margin-bottom:14px;">Key Statistics</div>
+            <div class="stats-grid-2">
+              <div class="stat-item-2"><div class="stat-label-2">Market Cap</div><div class="stat-value-2">{{ fmt_large(quote.market_cap) }}</div></div>
+              <div class="stat-item-2"><div class="stat-label-2">P/E Ratio</div><div class="stat-value-2">{{ "%.2f"|format(quote.pe_ratio) if quote.pe_ratio else "N/A" }}</div></div>
+              <div class="stat-item-2"><div class="stat-label-2">EPS</div><div class="stat-value-2">{{ "$%.2f"|format(quote.eps) if quote.eps else "N/A" }}</div></div>
+              <div class="stat-item-2"><div class="stat-label-2">52W High</div><div class="stat-value-2">{{ "$%.2f"|format(quote.week_high) if quote.week_high else "N/A" }}</div></div>
+              <div class="stat-item-2"><div class="stat-label-2">52W Low</div><div class="stat-value-2">{{ "$%.2f"|format(quote.week_low) if quote.week_low else "N/A" }}</div></div>
+              <div class="stat-item-2"><div class="stat-label-2">Volume</div><div class="stat-value-2">{{ "{:,}".format(quote.volume) if quote.volume else "N/A" }}</div></div>
+              <div class="stat-item-2"><div class="stat-label-2">Dividend</div><div class="stat-value-2">{{ "%.2f%%"|format(quote.dividend * 100) if quote.dividend else "N/A" }}</div></div>
+              <div class="stat-item-2"><div class="stat-label-2">Industry</div><div class="stat-value-2" style="font-size:12px;">{{ quote.industry or "N/A" }}</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- News + About -->
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="chart-card">
+            <div class="chart-card-title" style="margin-bottom:14px;">Latest News</div>
+            <div class="news-list" id="news-list">
+              <div class="news-skel skeleton"></div>
+              <div class="news-skel skeleton" style="margin-bottom:8px;"></div>
+              <div class="news-skel skeleton"></div>
+            </div>
+          </div>
+
+          {% if quote.description %}
+          <div class="chart-card">
+            <div class="chart-card-title" style="margin-bottom:10px;">About {{ quote.name }}</div>
+            <p style="font-size:13px;line-height:1.7;color:var(--text-sub);" id="about-text">{{ quote.description[:350] }}…</p>
+            <button onclick="expandAbout(event)" style="margin-top:10px;font-size:12px;color:var(--green);background:none;border:none;cursor:pointer;">Read more ↓</button>
+          </div>
+          {% endif %}
+        </div>
+
+      </div>
+
+      <!-- AI Insights -->
+      <div class="chart-card" style="margin-top:14px;">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title">AI Business Insights</div>
+            <div class="chart-card-sub">Plain-language summary of {{ quote.ticker }}'s financials</div>
+          </div>
+        </div>
+        <div id="insights-container">
+          <div class="empty-state">
+            <div class="empty-icon">🤖</div>
+            <p>Generate an AI summary of {{ quote.ticker }}'s business and recent financial performance.</p>
+            <button id="insights-generate-btn" class="stock-action-btn buy" onclick="generateInsights(false)">Generate Insights</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+  <script>
+    const TICKER = '{{ quote.ticker }}';
+    const FULL_DESC = `{{ (quote.description or '') | replace('`', "'") | replace('\n', ' ') }}`;
+    let chart = null;
+
+    async function loadChart(ticker, period, btn) {
+      document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      const data = await fetch(`/api/stock/${ticker}/history?period=${period}`).then(r => r.json());
+      const labels = data.map(d => d.date);
+      const prices = data.map(d => d.close);
+      const isUp = prices.length > 1 && prices[prices.length - 1] >= prices[0];
+      const color = isUp ? '#00D97E' : '#F87171';
+
+      const ctx = document.getElementById('price-chart').getContext('2d');
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            data: prices,
+            borderColor: color,
+            borderWidth: 2.5,
+            pointRadius: 0,
+            fill: true,
+            tension: 0.4,
+            backgroundColor: (ctx) => {
+              const g = ctx.chart.ctx.createLinearGradient(0,0,0,200);
+              g.addColorStop(0, isUp ? 'rgba(0,217,126,0.18)' : 'rgba(248,113,113,0.18)');
+              g.addColorStop(1, 'rgba(0,0,0,0)');
+              return g;
+            },
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: color,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode:'index', intersect:false },
+          plugins: {
+            legend: { display:false },
+            tooltip: {
+              backgroundColor:'#1C1F1C', borderColor:'#2C302C', borderWidth:1,
+              titleColor:'#8A8E8A', bodyColor:'#E8EBE8',
+              callbacks: { label: ctx => `$${ctx.parsed.y.toFixed(2)}` }
+            }
+          },
+          scales: {
+            x: { ticks:{color:'#5A5E5A', maxTicksLimit:8, font:{size:11}}, grid:{color:'#1C1F1C'} },
+            y: { ticks:{color:'#5A5E5A', callback:v=>`$${v}`, font:{size:11}}, grid:{color:'#1C1F1C'} },
+          }
+        }
+      });
+    }
+
+    async function loadNews() {
+      const res = await fetch(`/api/news/${TICKER}`).then(r => r.json());
+      const el = document.getElementById('news-list');
+      if (!res.length) { el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">No recent news.</p>'; return; }
+      el.innerHTML = res.map(n => {
+        const date = n.time ? new Date(n.time * 1000).toLocaleDateString() : '';
+        return `<a href="${n.link}" target="_blank" rel="noopener" class="news-item">
+          <div class="news-title">${n.title}</div>
+          <div class="news-meta">${n.publisher}${date ? ' · ' + date : ''}</div>
+        </a>`;
+      }).join('');
+    }
+
+    async function toggleWatchlist(ticker, btn) {
+      const isSaved = btn.classList.contains('saved');
+      if (isSaved) {
+        await fetch(`/api/watchlist/${ticker}`, { method: 'DELETE' });
+        document.querySelectorAll('[id^=watchlist-btn]').forEach(b => {
+          b.textContent = b.id === 'watchlist-btn' ? '☆ Watch' : '☆ Add to Watchlist';
+          b.classList.remove('saved');
+          b.style.borderColor = ''; b.style.color = '';
+        });
+      } else {
+        await fetch('/api/watchlist', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ticker}) });
+        document.querySelectorAll('[id^=watchlist-btn]').forEach(b => {
+          b.textContent = b.id === 'watchlist-btn' ? '★ Saved' : '★ Remove from Watchlist';
+          b.classList.add('saved');
+        });
+      }
+    }
+
+    function expandAbout(e) {
+      document.getElementById('about-text').textContent = FULL_DESC;
+      e.target.style.display = 'none';
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/';
+    }
+
+    async function generateInsights(force) {
+      const btn = document.getElementById(force ? 'insights-regenerate-btn' : 'insights-generate-btn');
+      if (btn) btn.classList.add('btn-loading');
+
+      try {
+        const res = await fetch(`/api/stock/${TICKER}/insights`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ force: !!force }),
+        });
+        const data = await res.json();
+        if (!res.ok) { renderInsightsError(data.error || 'Could not generate insights.'); return; }
+        renderInsights(data);
+      } catch {
+        renderInsightsError('Could not generate insights.');
+      } finally {
+        if (btn) btn.classList.remove('btn-loading');
+      }
+    }
+
+    function renderInsights(data) {
+      const verdictClass = { healthy: 'good', improving: 'good', declining: 'bad', mixed: 'neutral' }[data.performance_verdict] || 'neutral';
+      const flagsHtml = data.notable_flags.length
+        ? `<ul class="insights-flags">${data.notable_flags.map(f => `<li>${f}</li>`).join('')}</ul>`
+        : `<p class="insights-section-body">No notable flags in this data.</p>`;
+      const driversHtml = `<ul class="insights-drivers">${data.performance_drivers.map(d => `<li>${d}</li>`).join('')}</ul>`;
+
+      document.getElementById('insights-container').innerHTML = `
+        <div class="insights-section">
+          <div class="insights-section-title">Business Overview</div>
+          <p class="insights-section-body">${data.business_overview}</p>
+        </div>
+        <div class="insights-section">
+          <div class="insights-section-title">Income Statement Summary</div>
+          <p class="insights-section-body">${data.income_statement_summary}</p>
+        </div>
+        <div class="insights-section">
+          <div class="insights-section-title">Performance Assessment</div>
+          <span class="insights-verdict-badge ${verdictClass}">${data.performance_verdict}</span>
+          ${driversHtml}
+        </div>
+        <div class="insights-section">
+          <div class="insights-section-title">Notable Flags</div>
+          ${flagsHtml}
+        </div>
+        <div class="insights-meta">
+          <span>${data.cached ? 'Cached' : 'Generated'} · ${timeAgo(data.generated_at)}</span>
+          <button id="insights-regenerate-btn" class="period-tab" onclick="generateInsights(true)">Regenerate</button>
+        </div>
+      `;
+    }
+
+    function renderInsightsError(msg) {
+      document.getElementById('insights-container').innerHTML =
+        `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${msg}</p></div>`;
+    }
+
+    function timeAgo(iso) {
+      const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.round(mins / 60);
+      if (hrs < 24) return `${hrs}h ago`;
+      return `${Math.round(hrs / 24)}d ago`;
+    }
+
+    loadChart(TICKER, '1M', null);
+    loadNews();
+    loadUsage();
+
+    async function loadUsage() {
+      const textEl = document.getElementById('usage-text');
+      const barEl  = document.getElementById('usage-bar');
+      if (!textEl) return;
+      try {
+        const res  = await fetch('/api/watchlist');
+        if (!res.ok) return;
+        const data = await res.json();
+        const n    = Array.isArray(data) ? data.length : 0;
+        const limit = 5;
+        textEl.textContent = barEl ? `${n} / ${limit}` : `${n} stocks`;
+        if (barEl) barEl.style.width = `${Math.min(n / limit * 100, 100)}%`;
+      } catch {}
+    }
+  </script>
+</body>
+</html>

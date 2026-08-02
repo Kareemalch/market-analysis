@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Market Cap — Dashboard</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- ═══════════════════════════ SIDEBAR ═══════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">MC</div>
+      <div>
+        <div class="brand-name">Market Cap</div>
+        <div class="brand-sub">Finance Panel</div>
+      </div>
+    </div>
+
+    <div class="sidebar-search">
+      <div class="sidebar-search-box" style="position:relative;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input id="search-input" type="text" placeholder="Search…" autocomplete="off" />
+        <div class="autocomplete-dropdown hidden" id="autocomplete" style="width:calc(var(--sidebar-w) - 32px);"></div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">General</div>
+      <a href="/" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Home Page
+      </a>
+      <a href="/" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+        <span class="nav-badge"><span class="nav-badge-dot"></span> 3</span>
+      </a>
+      <a href="/portfolio" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        Portfolio
+      </a>
+      <a href="/pricing" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        Pricing
+        {% if pro %}<span class="pro-badge">PRO</span>{% endif %}
+      </a>
+
+      <div class="nav-section-label" style="margin-top:8px;">Account</div>
+      <a href="/login" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Messages
+      </a>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        Settings
+      </div>
+      {% if user %}
+      <button class="nav-item" onclick="logout()" style="width:100%;text-align:left;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sign Out
+      </button>
+      {% else %}
+      <a href="/login" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Sign In
+      </a>
+      {% endif %}
+    </nav>
+
+    {% if user and not pro %}
+    <div class="sidebar-upgrade">
+      <div class="sidebar-upgrade-title">⚡ Upgrade to Pro</div>
+      <div class="sidebar-upgrade-sub">Unlimited watchlist · All chart periods</div>
+      <a href="/pricing" class="sidebar-upgrade-btn">View Plans →</a>
+    </div>
+    {% endif %}
+
+    <div class="sidebar-footer">
+      <div class="usage-label">Watchlist Usage</div>
+      <div class="usage-bar-wrap">
+        <div class="usage-bar" {% if not pro %}style="width:0%;" id="usage-bar"{% endif %}></div>
+      </div>
+      <div class="usage-text" id="usage-text">— / —</div>
+      <div class="usage-sub">{% if pro %}Pro · Unlimited stocks{% else %}Free · 5 stock limit{% endif %}</div>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════ MAIN ═══════════════════════════ -->
+  <div class="main-wrap">
+
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="topbar-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+      </div>
+      <div class="topbar-info">
+        <div class="topbar-title">
+          Dashboard
+          <span class="topbar-dot"></span>
+          <span class="topbar-count">3</span>
+        </div>
+        <div class="topbar-sub">Track and Learn about your assets</div>
+      </div>
+      <div class="topbar-actions">
+        {% if user %}
+          <span style="font-size:12px;color:var(--text-muted);margin-right:4px;">{{ user }}</span>
+        {% endif %}
+        <button class="topbar-btn" title="Expand">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        </button>
+        <button class="topbar-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- Overview header -->
+      <div class="page-header">
+        <div class="page-title-row">
+          <span class="page-title">Overview</span>
+          <span class="page-badge">7 days</span>
+        </div>
+        <div class="page-actions">
+          <button class="topbar-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
+          <button class="topbar-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+        </div>
+      </div>
+
+      <!-- Stat cards -->
+      <div class="stats-row" id="stat-cards">
+        <!-- Gross Revenue -->
+        <div class="stat-card">
+          <div class="stat-card-label">Gross Revenue</div>
+          <div class="stat-card-sub">Your revenue from last month</div>
+          <div class="stat-card-value" id="sc-revenue">—</div>
+          <div class="stat-card-change" id="sc-revenue-chg">
+            <span style="color:var(--text-muted);font-size:11px;">Loading…</span>
+          </div>
+          <div class="stat-mini-chart"><canvas id="mini-chart-revenue"></canvas></div>
+        </div>
+        <!-- Auto Trades (volume proxy) -->
+        <div class="stat-card">
+          <div class="stat-card-label">Market Volume</div>
+          <div class="stat-card-sub">Amount of trades today</div>
+          <div class="stat-card-value" id="sc-vol">—</div>
+          <div class="stat-card-change" id="sc-vol-chg">
+            <span style="color:var(--text-muted);font-size:11px;">Loading…</span>
+          </div>
+          <div class="stat-mini-chart"><canvas id="mini-chart-vol"></canvas></div>
+        </div>
+        <!-- New assets -->
+        <div class="stat-card">
+          <div class="stat-card-label">Tracked Assets</div>
+          <div class="stat-card-sub">Stocks in your watchlist</div>
+          <div class="stat-card-value" id="sc-assets">—</div>
+          <div class="stat-card-change" id="sc-assets-chg">
+            <span class="positive">+21</span>
+            <span class="from">New this month</span>
+          </div>
+          <div class="stat-mini-chart"><canvas id="mini-chart-assets"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Chart grid -->
+      <div class="chart-grid">
+
+        <!-- Main chart -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div>
+              <div class="chart-card-title">Price Chart</div>
+              <div class="chart-card-sub">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Live stock data
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <div class="period-tabs" style="margin-bottom:0;">
+                <button class="period-tab" onclick="switchMainChart('1D',this)">1D</button>
+                <button class="period-tab" onclick="switchMainChart('1W',this)">1W</button>
+                <button class="period-tab active" onclick="switchMainChart('1M',this)">1M</button>
+                <button class="period-tab" onclick="switchMainChart('1Y',this)">1Y</button>
+              </div>
+              <button class="chart-add-btn">+</button>
+            </div>
+          </div>
+
+          <!-- Ticker selector -->
+          <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;" id="ticker-pills">
+            {% for t in ['AAPL','TSLA','NVDA','MSFT','AMZN'] %}
+            <button
+              class="period-tab {% if loop.first %}active{% endif %}"
+              onclick="setMainTicker('{{ t }}', this)"
+              style="font-size:12px;"
+            >{{ t }}</button>
+            {% endfor %}
+          </div>
+
+          <div class="chart-wrapper">
+            <canvas id="main-chart"></canvas>
+          </div>
+          <div class="chart-footer">
+            <div class="chart-footer-left">
+              <div class="cf-label">AVG</div>
+              <div class="cf-value" id="main-avg">—</div>
+            </div>
+            <div class="chart-footer-right">
+              <div class="cf-label">Date Range</div>
+              <div class="cf-value" id="main-date">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Assets panel -->
+        <div class="assets-panel">
+          <div class="assets-panel-title">Assets</div>
+          <div class="assets-panel-sub">Best assets from your portfolio</div>
+          <div class="asset-list" id="asset-list">
+            <div class="skeleton" style="height:40px;margin-bottom:6px;"></div>
+            <div class="skeleton" style="height:40px;margin-bottom:6px;"></div>
+            <div class="skeleton" style="height:40px;margin-bottom:6px;"></div>
+            <div class="skeleton" style="height:40px;margin-bottom:6px;"></div>
+            <div class="skeleton" style="height:40px;"></div>
+          </div>
+          <div class="assets-footer">
+            <div class="cf-label">AVG</div>
+            <div class="cf-value" id="assets-avg">+0.00%</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Top Trending Table -->
+      <div class="stocks-section">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Top Trending Stocks</div>
+            <div class="section-sub">Live prices · updated now</div>
+          </div>
+          <a href="/portfolio" style="font-size:12px;color:var(--text-muted);padding:6px 12px;background:var(--bg-card-2);border:1px solid var(--border-light);border-radius:var(--radius-sm);">View All</a>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Ticker</th>
+                <th>Price</th>
+                <th>Change</th>
+                <th>Market Cap</th>
+                <th>Volume</th>
+                <th style="text-align:right;">Chart</th>
+              </tr>
+            </thead>
+            <tbody id="trending-tbody">
+              <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted);">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main-wrap -->
+
+  <script src="/static/js/app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const TRENDING_TICKERS = ['AAPL','TSLA','NVDA','MSFT','AMZN','META','GOOG','SBUX'];
+    const ASSET_COLORS = ['#F7931A','#627EEA','#9945FF','#4CAF50','#F0B90B'];
+    const ASSET_ICONS  = ['₿','Ξ','◎','K','B'];
+    let mainChart = null;
+    let currentTicker = 'AAPL';
+    let currentPeriod = '1M';
+
+    // ── Mini sparkline ──────────────────────────────────────────
+    function drawMiniChart(canvasId, data, color) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: data.map((_,i) => i),
+          datasets: [{ data, borderColor: color, borderWidth: 2, pointRadius: 0, tension: 0.5, fill: true,
+            backgroundColor: (ctx) => {
+              const g = ctx.chart.ctx.createLinearGradient(0,0,0,80);
+              g.addColorStop(0, color.replace(')',',0.3)').replace('rgb','rgba'));
+              g.addColorStop(1, 'rgba(0,0,0,0)');
+              return g;
+            }
+          }]
+        },
+        options: {
+          responsive: false,
+          plugins: { legend: { display:false }, tooltip: { enabled:false } },
+          scales: { x: { display:false }, y: { display:false } }, animation: false,
+        }
+      });
+    }
+
+    function sparkPoints(base, n=12, variance=0.04) {
+      return Array.from({length:n}, () => base + (Math.random()-0.5)*base*variance);
+    }
+
+    // ── Main chart ──────────────────────────────────────────────
+    async function loadMainChart(ticker, period) {
+      const data = await fetch(`/api/stock/${ticker}/history?period=${period}`).then(r=>r.json()).catch(()=>[]);
+      if (!data.length) return;
+
+      const labels = data.map(d => d.date);
+      const prices = data.map(d => d.close);
+      const isUp   = prices[prices.length-1] >= prices[0];
+      const color  = isUp ? '#00D97E' : '#F87171';
+
+      const ctx = document.getElementById('main-chart').getContext('2d');
+      if (mainChart) mainChart.destroy();
+
+      mainChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            data: prices,
+            borderColor: color,
+            borderWidth: 2.5,
+            pointRadius: 0,
+            fill: true,
+            tension: 0.4,
+            backgroundColor: (ctx) => {
+              const g = ctx.chart.ctx.createLinearGradient(0,0,0,220);
+              g.addColorStop(0, isUp ? 'rgba(0,217,126,0.18)' : 'rgba(248,113,113,0.18)');
+              g.addColorStop(1, 'rgba(0,0,0,0)');
+              return g;
+            },
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: color,
+            pointHoverBorderColor: '#000',
+            pointHoverBorderWidth: 2,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode:'index', intersect:false },
+          plugins: {
+            legend: { display:false },
+            tooltip: {
+              backgroundColor: '#1C1F1C',
+              borderColor: '#2C302C',
+              borderWidth: 1,
+              titleColor: '#8A8E8A',
+              bodyColor: '#E8EBE8',
+              callbacks: { label: ctx => `$${ctx.parsed.y.toFixed(2)}` }
+            }
+          },
+          scales: {
+            x: { ticks: { color:'#5A5E5A', maxTicksLimit:8, font:{size:11} }, grid: { color:'#1C1F1C' } },
+            y: { ticks: { color:'#5A5E5A', callback:v=>`$${v}`, font:{size:11} }, grid: { color:'#1C1F1C' } },
+          }
+        }
+      });
+
+      // Update footer
+      const avg = prices.reduce((a,b)=>a+b,0)/prices.length;
+      const chgPct = ((prices[prices.length-1]-prices[0])/prices[0]*100).toFixed(2);
+      document.getElementById('main-avg').textContent = (chgPct>=0?'+':'')+chgPct+'%';
+      document.getElementById('main-avg').style.color = isUp ? '#00D97E' : '#F87171';
+      document.getElementById('main-date').textContent = `${labels[0]} – ${labels[labels.length-1]}`;
+    }
+
+    function switchMainChart(period, btn) {
+      currentPeriod = period;
+      document.querySelectorAll('#main-chart-card .period-tab').forEach(b=>b.classList.remove('active'));
+      // also update period tabs
+      document.querySelectorAll('.period-tab').forEach(b=>{
+        if(b.textContent===period && b.closest('.chart-card')) {
+          // only if it's period tab
+        }
+      });
+      if(btn) btn.classList.add('active');
+      loadMainChart(currentTicker, period);
+    }
+
+    function setMainTicker(ticker, btn) {
+      currentTicker = ticker;
+      document.querySelectorAll('#ticker-pills .period-tab').forEach(b=>b.classList.remove('active'));
+      if(btn) btn.classList.add('active');
+      loadMainChart(ticker, currentPeriod);
+    }
+
+    // ── Stat cards ──────────────────────────────────────────────
+    async function loadStatCards() {
+      const q = await fetch('/api/stock/AAPL').then(r=>r.json()).catch(()=>null);
+      if (!q) return;
+
+      const revEl  = document.getElementById('sc-revenue');
+      const volEl  = document.getElementById('sc-vol');
+      const asstEl = document.getElementById('sc-assets');
+
+      revEl.innerHTML  = `$${q.price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+      volEl.innerHTML  = q.volume ? (q.volume/1e6).toFixed(0)+'M' : '—';
+      asstEl.innerHTML = '53';
+
+      const isUp = q.change_pct >= 0;
+      document.getElementById('sc-revenue-chg').innerHTML =
+        `<span class="${isUp?'positive':'negative'}">${isUp?'+':''}${q.change_pct.toFixed(2)}%</span>
+         <span class="from">From last month</span>`;
+      document.getElementById('sc-vol-chg').innerHTML =
+        `<span style="color:var(--orange);">+1259</span>
+         <span class="from">From last month</span>`;
+
+      // Mini charts
+      const pts = sparkPoints(q.price);
+      setTimeout(() => {
+        const greenHex = 'rgba(0,217,126,1)';
+        const orangeHex = 'rgba(245,158,11,1)';
+        const purpleHex = 'rgba(168,85,247,1)';
+        drawMiniChart('mini-chart-revenue', pts, greenHex);
+        drawMiniChart('mini-chart-vol', sparkPoints(q.volume||1000000, 12, 0.05), orangeHex);
+        drawMiniChart('mini-chart-assets', sparkPoints(53, 12, 0.06), purpleHex);
+      }, 100);
+    }
+
+    // ── Asset list ──────────────────────────────────────────────
+    async function loadAssets() {
+      const tickers = ['AAPL','MSFT','NVDA','AMZN','TSLA'];
+      const names   = ['Apple Inc.','Microsoft','Nvidia','Amazon','Tesla'];
+      const quotes  = await Promise.all(tickers.map(t=>fetch(`/api/stock/${t}`).then(r=>r.json()).catch(()=>null)));
+
+      const list = document.getElementById('asset-list');
+      list.innerHTML = '';
+      let totalPct = 0, count = 0;
+
+      quotes.forEach((q, i) => {
+        if (!q) return;
+        const isUp = q.change_pct >= 0;
+        totalPct += q.change_pct; count++;
+
+        const row = document.createElement('a');
+        row.href = `/stock/${tickers[i]}`;
+        row.className = 'asset-row';
+        row.innerHTML = `
+          <div class="asset-icon" style="background:${ASSET_COLORS[i]}22;color:${ASSET_COLORS[i]};font-size:12px;font-weight:800;">${tickers[i].slice(0,2)}</div>
+          <div class="asset-name">${names[i]}</div>
+          <div class="asset-spark"><canvas width="60" height="28" id="asp-${i}"></canvas></div>`;
+        list.appendChild(row);
+
+        setTimeout(() => {
+          const c = document.getElementById(`asp-${i}`);
+          if (c) drawMiniChart(`asp-${i}`, sparkPoints(q.price, 10, 0.03), isUp ? '#00D97E' : '#F87171');
+        }, 0);
+      });
+
+      if (count) {
+        const avg = totalPct / count;
+        const el = document.getElementById('assets-avg');
+        el.textContent = (avg>=0?'+':'')+avg.toFixed(2)+'%';
+        el.style.color = avg>=0 ? 'var(--positive)' : 'var(--negative)';
+      }
+    }
+
+    // ── Trending table ──────────────────────────────────────────
+    async function loadTrendingTable() {
+      const quotes = await Promise.all(TRENDING_TICKERS.map(t=>fetch(`/api/stock/${t}`).then(r=>r.json()).catch(()=>null)));
+      const tbody = document.getElementById('trending-tbody');
+      tbody.innerHTML = '';
+
+      quotes.filter(Boolean).forEach((q, i) => {
+        const isUp = q.change_pct >= 0;
+        const cap = q.market_cap ? (q.market_cap>=1e12 ? `$${(q.market_cap/1e12).toFixed(2)}T` : q.market_cap>=1e9 ? `$${(q.market_cap/1e9).toFixed(2)}B` : `$${q.market_cap.toLocaleString()}`) : '—';
+        const vol = q.volume ? (q.volume>=1e9 ? `${(q.volume/1e9).toFixed(2)}B` : q.volume>=1e6 ? `${(q.volume/1e6).toFixed(2)}M` : q.volume.toLocaleString()) : '—';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>
+            <a href="/stock/${q.ticker}" style="display:block;">
+              <div class="td-ticker">${q.ticker}</div>
+              <div class="td-name">${q.name.split(' ').slice(0,2).join(' ')}</div>
+            </a>
+          </td>
+          <td style="font-weight:700;">$${q.price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+          <td><span class="td-badge ${isUp?'pos':'neg'}">${isUp?'↑':'↓'}${Math.abs(q.change_pct).toFixed(2)}%</span></td>
+          <td style="color:var(--text-sub);">${cap}</td>
+          <td style="color:var(--text-sub);">${vol}</td>
+          <td class="td-right"><canvas width="72" height="32" id="tsp-${i}" style="display:inline-block;"></canvas></td>`;
+        tbody.appendChild(tr);
+
+        setTimeout(() => {
+          const c = document.getElementById(`tsp-${i}`);
+          if (c) drawMiniChart(`tsp-${i}`, sparkPoints(q.price, 12, 0.03), isUp ? '#00D97E' : '#F87171');
+        }, 0);
+      });
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method:'POST' });
+      window.location.href = '/';
+    }
+
+    async function loadUsage() {
+      const textEl = document.getElementById('usage-text');
+      const barEl  = document.getElementById('usage-bar');
+      if (!textEl) return;
+      try {
+        const res  = await fetch('/api/watchlist');
+        if (!res.ok) return;
+        const data = await res.json();
+        const n    = Array.isArray(data) ? data.length : 0;
+        const limit = 5;
+        textEl.textContent = barEl ? `${n} / ${limit}` : `${n} stocks`;
+        if (barEl) barEl.style.width = `${Math.min(n / limit * 100, 100)}%`;
+      } catch {}
+    }
+
+    // Init
+    loadStatCards();
+    loadMainChart('AAPL', '1M');
+    loadAssets();
+    loadTrendingTable();
+    loadUsage();
+  </script>
+</body>
+</html>
